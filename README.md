@@ -16,3 +16,5 @@ Your assignment is submitted when the PR is opened.
 - Your PR must render successfully
 
 Starting later in the course, we will use `renv` for reproducibility.
+
+Okay
