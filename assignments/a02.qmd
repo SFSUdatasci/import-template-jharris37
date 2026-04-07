@@ -37,12 +37,14 @@ library(ggplot2)
 Using `here()` is a convenient way to build paths relative to your project root (e.g., your `.qmd` might live in `scripts/` while data lives in `data/`).
 
 ```{r}
+# importing dataset
 coyotebrush <- read_csv(here::here("data/raw", "example_data_coyotebrush.csv"))
 ```
 
 (Optional) Quick peek at the data:
 
 ```{r}
+# viewing dataset
 head(coyotebrush)
 
 # Additional viewing functions:
