@@ -1,0 +1,72 @@
+---
+title: "Analysis of San bruno Mountain Dataset"
+subtitle: "coreR Session 05 — Section 5.7 Practice"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+execute:
+  warning: false
+  message: false
+---
+
+# Introduction
+
+# In this assignment, I will utilize the provided ocean water samples as practice in using the Redfield Ratio. The Redfield Ratio is a significant tool used to measure and diagnose ocean health.  The optimal ratio is known to be 16 nitrogen to 1 phosphate and any fluctuation outside of this ratio serves as an indication of changing conditions due to factors such as polution, climate change, or unusual ocean currents. *CHANGE THIS TO FIT ASSIGNMENT 2*
+
+
+## About the data
+
+The seawater chemistry dataset used here is `BGchem2008data.csv` (downloaded previously in the course). *CHANGE THIS TO FIT ASSIGNMENT 2*
+
+-   Date downloaded: February 23, 2026 
+-   Download source: CSV File
+
+You will explore the nitrogen to phosphate ratio, which indicates the health of the ocean ecosystem. <https://beal-agulhas.earth.miami.edu/teaching/courses/lecture-five/index.html>
+
+## Setup
+
+Best practice: put all `library()` calls in one chunk near the top so collaborators can see what packages are required.
+
+```{r}
+library(here)
+library(readr)
+```
+
+# Read in the data
+
+Quarto runs R in the same way as a script: objects only exist after the chunks that create them have been run.
+
+Using `here()` is a convenient way to build paths relative to your project root (e.g., your `.qmd` might live in `scripts/` while data lives in `data/`).
+
+```{r}
+bg_chem <- read_csv(here::here("data/raw", "BGchem2008data.csv"))
+```
+
+(Optional) Quick peek at the data:
+
+```{r}
+# Uncomment if you want more inspection output
+ names(bg_chem)
+# str(bg_chem)
+# head(bg_chem)
+# summary(bg_chem)
+```
+
+# Analysis
+
+As the “analysis”, we’ll calculate a few simple summary statistics and examine how the nitrogen:phosphate values compare to the **Redfield ratio** concept.
+
+*IS THE DATA TIDY*
+
+
+## Calculate summary statistics
+
+Compute mean nutrient values (using `na.rm = TRUE` so missing values don’t break the calculation).
+
+```{r}
+nitrate <- mean(bg_chem$NO3, na.rm = TRUE)
+nitrite <- mean(bg_chem$NO2, na.rm = TRUE)
+amm     <- mean(bg_chem$NH4, na.rm = TRUE)
+phos    <- mean(bg_chem$P,   na.rm = TRUE)
+```
