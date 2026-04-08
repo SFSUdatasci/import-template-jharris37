@@ -21,7 +21,7 @@ library(readr)
 catch_original <- read.csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1")
 ```
 
-## About the data
+## About the Data
 
 The salmon catch dataset used here is 'df35b.302.1.csv' (downloaded previously in the course from Alaska Department of Fish and Game).
 
