@@ -1,0 +1,394 @@
+---
+title: "Data Visualization"
+subtitle: "a05 assignment"
+author: "Joshua Harris"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+execute:
+  warning: false
+  message: false
+---
+
+## Introduction
+
+In this assignment, I work with a socio-ecological monitoring dataset from Delta restoration sites and transformed it into a tidy format ready for visualization. The goal of this exercise is to apply our strengthened data cleaning skills to reshape summarize, and plot our dataset while generating interactive maps that display how visitation varies across the restoration sites.  
+
+## Import the Data
+
+```{r}
+# loading packages
+library(readr)
+library(dplyr)
+library(tidyr)
+library(forcats) # makes working with factors easier
+library(ggplot2)
+library(leaflet) # interactive maps
+library(DT) # interactive tables
+library(scales) # scale functions for visualization
+library(janitor) # expedite cleaning and exploring data
+library(viridis) # colorblind friendly color palette
+```
+
+```{r}
+# reading in data
+delta_visits_raw <- read_csv(here::here("data/raw", "Socioecological_monitoring_data.csv"))
+```
+
+## Explore the Data
+
+```{r}
+# checking column names
+colnames(delta_visits_raw)
+```
+
+```{r}
+# peaking at each column and class
+glimpse(delta_visits_raw)
+```
+
+```{r}
+# displaying from when to when
+range(delta_visits_raw$Date)
+```
+
+```{r}
+# pulling out unique variable such as time of day
+unique(delta_visits_raw$Time_of_Day)
+```
+
+## Clean the Data
+
+```{r}
+# transforming all column names into the same format
+delta_visits <- delta_visits_raw %>% 
+    janitor::clean_names()
+
+colnames(delta_visits)
+```
+
+```{r}
+# reshaping data into a long format
+visits_long <- delta_visits %>% 
+    pivot_longer(cols = c(sm_boat, med_boat, lrg_boat, bank_angler, scientist, cars),
+                 names_to = "visitor_type",
+                 values_to = "quantity") %>%
+    rename(restore_loc = eco_restore_approximate_location) %>% 
+    select(-notes)
+
+## Checking the outcome
+head(visits_long)
+```
+
+##### Exercise 1
+
+```{r}
+# calculating daily visits by "restore_loc", "date", and "visitor_type"
+daily_visits_loc <- visits_long %>%
+    group_by(restore_loc, date, visitor_type) %>% 
+    summarise(daily_visits = sum(quantity))
+    
+head(daily_visits_loc)
+```
+
+## Plot the Data
+
+```{r}
+# Option 1 - data and mapping called in the ggplot() function
+ggplot(data = daily_visits_loc,
+       aes(x = restore_loc, y = daily_visits)) +
+    geom_col()
+
+
+# Option 2 - data called in ggplot function; mapping called in geom
+ggplot(data = daily_visits_loc) +
+    geom_col(aes(x = restore_loc, y = daily_visits))
+
+
+# Option 3 - data and mapping called in geom
+ggplot() +
+    geom_col(data = daily_visits_loc,
+             aes(x = restore_loc, y = daily_visits))
+```
+
+## Customize the Plot
+
+```{r}
+# plotting same bar graph from above but in color
+ggplot(data = daily_visits_loc,
+       aes(x = restore_loc, y = daily_visits,
+           fill = "green")) +
+    geom_col()
+```
+
+```{r}
+# correcting input of color to be outside of map aesthetics 
+ggplot(data = daily_visits_loc,
+       aes(x = restore_loc, y = daily_visits)) +
+    geom_col(fill = "green")
+```
+
+```{r}
+# mapping color of the bar to a variable
+ggplot(data = daily_visits_loc,
+       aes(x = restore_loc, y = daily_visits,
+           fill = visitor_type)) +
+    geom_col()
+```
+
+### Set ggplot Themes
+
+```{r}
+# making minor adjustments: adding labels, flipping axis orientation, and inputting built in theme
+ggplot(data = daily_visits_loc,
+       aes(y = restore_loc, x = daily_visits, fill = visitor_type)) +
+    geom_col() +
+    labs(x = "Number of Visits",
+         y = "Restoration Location",
+         fill = "Type of Visitor",
+         title = "Total Number of Visits to Delta Restoration Areas by visitor type",
+         subtitle = "Sum of all visits during July 2017 and March 2018") +
+    theme_bw()
+```
+
+```{r}
+# using theme() call to change position of legend
+ggplot(data = daily_visits_loc,
+       aes(y = restore_loc, x = daily_visits, fill = visitor_type)) +
+    geom_col() +
+    labs(x = "Number of Visits",
+         y = "Restoration Location",
+         fill = "Type of Visitor",
+         title = "Total Number of Visits to Delta Restoration Areas by visitor type",
+         subtitle = "Sum of all visits during study period") +
+    theme_bw() +
+    theme(legend.position = "bottom",
+          axis.ticks.y = element_blank()) 
+```
+
+```{r}
+# saving theme() series to use on multiple plots
+my_theme <- theme_bw(base_size = 16) +
+    theme(legend.position = "bottom",
+          axis.ticks.y = element_blank())
+```
+
+```{r}
+# current version of our plot
+ggplot(data = daily_visits_loc,
+       aes(y = restore_loc, x = daily_visits, fill = visitor_type)) +
+    geom_col() +
+    labs(x = "Number of Visits",
+         y = "Restoration Location",
+         fill = "Type of Visitor",
+         title = "Total Number of Visits to Delta Restoration Areas by visitor type",
+         subtitle = "Sum of all visits during study period") +
+    my_theme
+```
+
+#### Exercise 2
+
+```{r}
+# expanding the bars to remove the gap between the bars and border
+ggplot(data = daily_visits_loc,
+       aes(y = restore_loc, x = daily_visits, fill = visitor_type)) +
+    geom_col() +
+    labs(x = "Number of Visits",
+         y = "Restoration Location",
+         fill = "Type of Visitor",
+         title = "Total Number of Visits to Delta Restoration Areas by visitor type",
+         subtitle = "Sum of all visits during study period") +
+    scale_x_continuous(breaks = seq(0,120, 20), expand = c(0,0)) +
+    my_theme
+```
+
+### Reorder Categorical Variables 
+
+```{r}
+# reordering restore_loc based on total number of visits
+daily_visits_totals <- daily_visits_loc %>% 
+    group_by(restore_loc) %>%
+    mutate(n = sum(daily_visits)) %>% 
+    ungroup() %>%
+    mutate(restore_loc = fct_reorder(restore_loc, n))
+
+head(daily_visits_totals)
+```
+
+```{r}
+# reordering alphabetical order
+levels(daily_visits_totals$restore_loc)
+```
+
+```{r}
+# adding fct_reorder()
+ggplot(data = daily_visits_totals,
+       aes(x = daily_visits, y = restore_loc,
+           fill = visitor_type)) +
+    geom_col() +
+    labs(x = "Number of Visits",
+         y = "Restoration Location",
+         fill = "Type of Visitor",
+         title = "Total Number of Visits to Delta Restoration Areas by visitor type",
+         subtitle = "Sum of all visits during study period") +
+    scale_x_continuous(breaks = seq(0,120, 20), expand = c(0,0)) +
+    my_theme
+```
+
+```{r}
+# adding desc() to variable we're sorting by
+daily_visits_totals <- daily_visits_loc %>% 
+    group_by(restore_loc) %>%
+    mutate(n = sum(daily_visits)) %>% 
+    ungroup() %>%
+    mutate(restore_loc = fct_reorder(restore_loc, desc(n)))
+
+ggplot(data = daily_visits_totals,
+       aes(x = daily_visits, y = restore_loc,
+           fill = visitor_type)) +
+    geom_col() +
+    labs(x = "Number of Visits",
+         y = "Restoration Location",
+         fill = "Type of Visitor",
+         title = "Total Number of Visits to Delta Restoration Areas by visitor type",
+         subtitle = "Sum of all visits during study period") +
+    scale_x_continuous(breaks = seq(0,120, 20), expand = c(0,0)) +
+    my_theme
+```
+
+### Colors
+
+```{r}
+# changing colors!
+my_favorite_graph <- ggplot(data = daily_visits_totals,
+       aes(x = daily_visits, y = restore_loc,
+           fill = visitor_type)) +
+    geom_col() +
+    scale_fill_viridis_d() +
+    labs(x = "Number of Visits",
+         y = "Restoration Location",
+         fill = "Type of Visitor",
+         title = "Total Number of Visits to Delta Restoration Areas by visitor type",
+         subtitle = "Sum of all visits during study period") +
+    scale_x_continuous(breaks = seq(0,120, 20), expand = c(0,0)) +
+    my_theme
+
+my_favorite_graph
+```
+
+### Multiple Plots
+
+```{r}
+# mapping to a variable using the syntax
+facet_plot <- ggplot(data = daily_visits_totals,
+       aes(x = visitor_type, y = daily_visits,
+           fill = visitor_type)) +
+    geom_col() +
+    facet_wrap(~restore_loc,
+               scales = "free_y",
+               ncol = 5,
+               nrow = 2) +
+    scale_fill_viridis_d() +
+    labs(x = "Type of visitor",
+         y = "Number of Visits",
+         title = "Total Number of Visits to Delta Restoration Areas",
+         subtitle = "Sum of all visits during study period") +
+    theme_bw() +
+    theme(legend.position = "bottom",
+          axis.ticks.x = element_blank(),
+          axis.text.x = element_blank())
+
+facet_plot
+```
+
+## Interactive Visualization
+
+### Tables with DT
+
+```{r}
+# creating locations dataset
+locations <- visits_long %>%
+    distinct(restore_loc, .keep_all = TRUE) %>%
+    select(restore_loc, latitude, longitude)
+
+head(locations)
+```
+
+```{r}
+# convert our dataset into an interactive table using datatable()
+datatable(locations)
+```
+
+### Maps with Leaflet
+
+```{r}
+# using leaflet() and addTiles() to make an interactive map with base tiles
+leaflet(locations) %>%
+    addTiles() %>%
+    addMarkers(
+        lng = ~ longitude,
+        lat = ~ latitude,
+        popup = ~ restore_loc
+    )
+```
+
+```{r}
+# changing base map style
+leaflet(locations) %>%
+    addProviderTiles(providers$Esri.WorldTopoMap) %>%
+    addCircleMarkers(
+        lng = ~ longitude,
+        lat = ~ latitude,
+        popup = ~ restore_loc,
+        radius = 5,
+        # set fill properties
+        fillColor = "salmon",
+        fillOpacity = 1,
+        # set stroke properties
+        stroke = TRUE,
+        weight = 0.5,
+        color = "white",
+        opacity = 1)
+```
+
+```{r}
+# layering a second reference map
+my_favorite_map <- leaflet(locations) %>%
+    addProviderTiles(providers$Esri.WorldImagery) %>%
+    addProviderTiles(providers$CartoDB.PositronOnlyLabels) %>%
+    addCircleMarkers(
+        lng = ~ longitude,
+        lat = ~ latitude,
+        popup = ~ restore_loc,
+        radius = 5,
+        # set fill properties
+        fillColor = "salmon",
+        fillOpacity = 1,
+        # set stroke properties
+        stroke = TRUE,
+        weight = 0.5,
+        color = "white",
+        opacity = 1)
+
+my_favorite_map
+```
+
+
+
+## Analysis
+
+Our workflow began with the loading in of our raw dataset to evaluate the initial tidiness, structure, and potential errors. At first, we applied janitor::clean_names() to standardize our formatting and simplify any downstream wrangling. Since the raw dataset contained several different categories in separate columns, it was crucial that I standardized and reshaped the format into a long format using pivot_longer(). Now tidy, I applied this processed dataset to several different visualization approaches, generating various levels of bar graphs. Finally, with my processed dataset and refined plot, I generated an interactive map using leaflet with place markers on its base map and layered with additional visualizations to create a final spatial rendering of the visitation patterns I observed in my previous plots. Of all the versions of data plots and site maps created during the lesson, my personal favorites were:
+
+```{r}
+# favorite final version of plot:
+my_favorite_graph
+
+#favorite final version of map:
+my_favorite_map
+```
+  
+
+## Conclusion
+
+Overall, this assignment put my recently developed data cleaning skills to the test while reminding me how structured, reproducible data workflows can transform raw data into beautiful visualizations and meaningful ecological insights. By cleaning, reshaping, and summarizing the assigned dataset, I produced visualizations that shows clear differences in visitation across restoration sites and visitor type. Its really cool to see that, with all these outputs put together, we can illustrate how data visualization can support data interpretation, communication, and decision-making in socio-ecological research. Above all, this lesson also pushes the narrative forward that tidy data is foundational for interdisciplinary research.
