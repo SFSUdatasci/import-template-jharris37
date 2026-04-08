@@ -1,0 +1,279 @@
+---
+title: "Alaska Salmon Catches By Region: Cleaning and Wrangling Data"
+author: "Joshua Harris"
+---
+
+## Introduction
+
+In this assignment, I will be working with the Alaska commercial salmon catch dataset to practice crucial data-cleaning and wrangling skills using the functions dplyr and tidyr in R. The goal of this exercise is to evaluate the structure of raw data, identify any issues with tidiness, and apply a series of transformations to make it analysis-ready. Overall, this practice reinforces our skills towards maintaining tidiness when generating or handling essential data.
+
+## Import the Data
+
+```{r}
+# Load packages
+library(dplyr)
+library(tidyr)
+library(readr)
+```
+
+```{r}
+# Read in the data in from KNB Package Alaska commercial salmon catches by management region (1886-1997)
+catch_original <- read.csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1")
+```
+
+## About the data
+
+The salmon catch dataset used here is 'df35b.302.1.csv' (downloaded previously in the course from Alaska Department of Fish and Game).
+
+-   Date downloaded: March 10, 2026
+-   Download source: https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1
+
+This dataset contains commercial salmon catch records from Alaska as reported by the Alaska Department of Fish and Game. More specifically, this data includes the annual catch totals for several salmon species across various regions. 
+
+## Explore the Data
+
+Some basic ways to explore our data are:
+
+```{r}
+# colnames(catch_original)
+# prints the column names of my data frame
+
+# head(catch_original)
+# reveals first 6 lines of the data frame
+
+# summary(catch_original)
+# summarizes each column of data
+
+# unique(catch_original$Region)
+# prints unique values in a column (in this case, the region)
+
+# view(catch_original)
+# opens data frame in its own tab to see each row and column of the data (do in console)
+```
+
+## Cleaning/Reshaping the Data
+
+#### Select or remove columns using select() function
+
+```{r}
+# selecting desired column 
+catch_data <- catch_original %>%
+  select(Region, Year, Chinook, Sockeye, Coho, Pink, Chum)
+
+head(catch_data)
+```
+
+#### Quality Check
+
+```{r}
+# checking column types
+dplyr::glimpse(catch_data)
+```
+
+Issue:The Chinook catch data are "character" class so let's fix it using the function mutate().
+
+#### Change column content using mutate()
+
+```{r}
+# Converting Chinook catch values to numeric type
+catch_clean <- catch_data %>%
+    mutate(Chinook = as.numeric(Chinook))
+```
+
+```{r}
+# isolating the issue
+i <- which(is.na(catch_clean$Chinook))
+i
+
+# problem row
+catch_data[i,]
+```
+
+```{r}
+# changing invalid character value into numerical
+catch_clean <- catch_data %>%
+    mutate(Chinook = if_else(condition = Chinook == "I", 
+                             true = "1", 
+                             false = Chinook),
+           Chinook = as.numeric(Chinook))
+
+##check
+catch_clean[i, ]
+```
+
+#### Reshape data with pivot_longer() and pivot_wider()
+
+```{r}
+# changing wide format to a long format
+catch_long <- catch_clean %>% 
+    #pivot longer all columns except Region and Year
+    pivot_longer(
+        cols = -c(Region, Year),
+        names_to = "species",
+        values_to = "catch"
+    )
+
+head(catch_long)
+```
+
+#### Rename columns with rename()
+
+```{r}
+# renaming the "catch" coulm to be called "catch_thousands"
+catch_long <- catch_long %>%
+    rename(catch_thousands = catch)
+
+head(catch_long)
+```
+
+#### Add columns with mutate()
+
+```{r}
+# creating a new column called "catch"
+catch_long <- catch_long %>%
+    mutate(catch = catch_thousands * 1000)
+
+head(catch_long)
+```
+
+```{r}
+# removing "catch_thousands" column
+catch_long <- catch_long %>%
+    mutate(catch = catch_thousands * 1000) %>%
+    select(-catch_thousands)
+
+head(catch_long)
+```
+
+#### Summary statistics using group_by() and summarize()
+
+Suppose we are now interested in getting the average catch per region. Analyses like this conform to what is known as the Split-Apply-Combine strategy. This strategy follows three steps:
+
+1)  Split: Split the data into logical groups (e.g., region, species, etc.)
+
+2)  Apply: Calculate some summary statistic on each group (e.g. mean catch by year, number of individuals per species)
+
+3)  Combine: Combine the statistic calculated on each group back together into a single table
+
+```{r}
+# implementing Split-Apply-Combine strategy
+mean_region <- catch_long %>%
+    group_by(Region) %>%
+    summarize(mean_catch = mean(catch))
+
+head(mean_region)
+```
+
+```{r}
+# counting number of rows in each group
+n_region <- catch_long %>%
+    group_by(Region) %>%
+    summarize(n = n())
+
+head(n_region)
+```
+
+#### Filter rows using filter()
+
+```{r}
+# filtering original dataframe
+sse_catch <- catch_long %>%
+    filter(Region == "SSE")
+
+head(sse_catch)
+
+# filtering catches over a million fish
+catch_million <- catch_long %>%
+    filter(catch > 1000000)
+
+# filtering Chinook from SSE data
+chinook_see <- catch_long %>%
+    filter(Region == "SSE",
+           species == "Chinook")
+
+## alternative to filtering Chinook
+chinook_see <- catch_long %>%
+    filter(Region == "SSE" & species == "Chinook")
+```
+
+#### Sort data using arrange()
+
+```{r}
+# re-calculating mean catch by region, then arranging output by mean catch
+mean_region <- catch_long %>%
+    group_by(Region) %>%
+    summarize(mean_catch = mean(catch)) %>%
+    arrange(mean_catch)
+
+head(mean_region)
+```
+
+```{r}
+# reversing the sort order
+mean_region <- catch_long %>%
+    group_by(Region) %>%
+    summarize(mean_catch = mean(catch)) %>%
+    arrange(desc(mean_catch))
+
+head(mean_region)
+```
+
+#### Split and combine values in columns with separate() and unite()
+
+```{r}
+# separating island information
+sites_df <- data.frame(site = c("HAW-101",
+                                "HAW-103",
+                                "OAH-320",
+                                "OAH-219",
+                                "MAU-039"))
+
+sites_df %>%
+    separate(site, c("island", "site_number"), "-")
+```
+
+```{r}
+# uniting year, month, and day
+dates_df <- data.frame(
+    year = c("1930",
+             "1930",
+             "1930"),
+    month = c("12",
+              "12",
+              "12"),
+    day = c("14",
+            "15",
+            "16")
+)
+
+dates_df %>%
+    unite(date, year, month, day, sep = "-")
+```
+
+### Now, all together!
+
+```{r}
+catch_original <- read_csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1")
+
+mean_region <- catch_original %>%
+  select(-All, -notesRegCode) %>% 
+  mutate(Chinook = if_else(Chinook == "I", "1", Chinook)) %>% 
+  mutate(Chinook = as.numeric(Chinook)) %>% 
+  pivot_longer(-c(Region, Year), 
+               names_to = "species", 
+               values_to = "catch") %>%
+  mutate(catch = catch*1000) %>% 
+  group_by(Region) %>% 
+  summarize(mean_catch = mean(catch)) %>% 
+  arrange(desc(mean_catch))
+
+head(mean_region)
+```
+
+## Analysis
+
+To asses whether the data is tidy, I applied a series of transformations using several new functions from tidyverse. First, I selected our desired region's columns then corrected an issue in the Chinook column where one value was a character rather than an expected numerical value. After this adjustment, I reshaped the dataset from a wide format to a long format. Next, I converted catch values from thousands of fish to individual fish before finally grouping them by region and calculating their mean catches.  
+
+## Conclusion
+
+Overall, this assignment did a good job in allowing me to practice the cleaning and wrangling of data in R using tidyverse. By importing the real dataset, inspecting its structure, and applying multiple transformations, I was able to reinforce the practice of maintaining tidy data and emphasize the importance of organizing information so that each variable is clearly defined. Lastly, having to document everything on this quarto document contributed to my overall skills and understanding regarding reproducible workflows, driving home the lesson that careful data cleaning is a vital step in generating meaningful analyses!
