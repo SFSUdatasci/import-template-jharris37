@@ -12,9 +12,8 @@ execute:
 
 ### Introduction
 
-# In this assignment, we will utilize the provided ocean water samples as practice in using the Redfield Ratio. The Redfield Ratio is a significant tool used to measure and diagnose ocean health.  The optimal ratio is known to be 16 nitrogen to 1 phosphate and any fluctuation outside of this ratio serves as an indication of changing conditions due to factors such as polution, climate change, or unusual ocean currents.
+In this assignment, we will utilize the provided ocean water samples as practice in using the Redfield Ratio. The Redfield Ratio is a significant tool used to measure and diagnose ocean health.  The optimal ratio is known to be 16 nitrogen to 1 phosphate and any fluctuation outside of this ratio serves as an indication of changing conditions due to factors such as polution, climate change, or unusual ocean currents.
 
-# In this assignment, we will utilize the provided ocean water samples as practice in using the Redfield Ratio. The Redfield Ratio is a significant tool used to measure and diagnose ocean health.  The optimal ratio is known to be 16 nitrogen to 1 phosphate and any fluctuation outside of this ratio serves as an indication of changing conditions due to factors such as polution, climate change, or unusual ocean currents.
 
 This Quarto document follows the **Section 5.7 practice exercise** from coreR *Session 05 (Literate Analysis with Quarto)*: building a simple **prose + code** analysis using real seawater chemistry data (`BGchem2008data.csv`).\
 Source: <https://learning.nceas.ucsb.edu/2024-10-coreR/session_05.html>
@@ -79,10 +78,7 @@ ratio <- (nitrate + nitrite + amm) / phos
 ratio
 ```
 
-You can report results inline in Quarto like this:
-
-The Redfield ratio for this dataset is approximately: `r round(ratio)`
-# The Redfield Ratio for this dataset is approximately: r round 6.216519
+The Redfield Ratio for this dataset is approximately: r round 6.216519
 
 
 ## Plot Redfield Ratio Measurements
@@ -109,7 +105,5 @@ In this mini-analysis, we:
 -   Computed a mean nitrogen:phosphate ratio
 -   Created a basic plot relating total nitrogen to phosphate
 
-This is the core idea of **literate analysis**: combine narrative and code in one document so the workflow is easier to understand and reproduce.
-
-# In this project, I begun by installing and loading the appropriate packages such as readr. Then I had to read over the data which initially failed and required me to adjust my code to specify my data/raw folder. After this and the proceeding calculations, I was able to produce a mean nitrogen:phosphate ratio (otherwise known as the Redfield Ratio) of 6.216519. Lastly, I visualized the data by plotting a graph displaying the relationship between phosphate and the total nitrogen components. Very cool!
+In this project, I begun by installing and loading the appropriate packages such as readr. Then I had to read over the data which initially failed and required me to adjust my code to specify my data/raw folder. After this and the proceeding calculations, I was able to produce a mean nitrogen:phosphate ratio (otherwise known as the Redfield Ratio) of 6.216519. Lastly, I visualized the data by plotting a graph displaying the relationship between phosphate and the total nitrogen components. Very cool!
 
